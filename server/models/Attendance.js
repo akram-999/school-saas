@@ -1,16 +1,14 @@
 const mongoose = require('mongoose');
 
 const AttendanceSchema = new mongoose.Schema({
-  person: {
-    type: mongoose.Schema.Types.ObjectId,
-    refPath: 'personType',
-    required: true
-  },
-  personType: {
-    type: String,
-    required: true,
-    enum: ['Student', 'Teacher']
-  },
+  userType: { 
+    type: String, 
+    enum: ['Student', 'Teacher'], 
+    required: true },
+  userId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    required: true, 
+    refPath: 'userType' },
   class: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Class',
@@ -45,6 +43,6 @@ const AttendanceSchema = new mongoose.Schema({
 });
 
 // Prevent user from submitting more than one attendance record per day for the same person and class
-AttendanceSchema.index({ person: 1, personType: 1, class: 1, date: 1 }, { unique: true });
+AttendanceSchema.index({ userId: 1, class: 1, date: 1 }, { unique: true });
 
 module.exports = mongoose.model('Attendance', AttendanceSchema); 
