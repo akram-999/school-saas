@@ -16,11 +16,7 @@ const transportationSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a type']
   },
-  route: {
-    type: String,
-    required: [true, 'Please add a route']
-  },
-  driver: {
+  driverId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Driver'
   },
@@ -36,6 +32,11 @@ const transportationSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School',
   },
+  studentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Student',
+  },
+  
 })
 
 module.exports = mongoose.model('Transportation', transportationSchema);

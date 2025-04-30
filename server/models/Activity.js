@@ -18,14 +18,11 @@ const activitySchema = new mongoose.Schema({
     },
     price: {
         type: Number,
-        required: true,
+        
     },
     category: {
         type: String,
         required: true,
-    },
-    tags: {
-        type: [String],
     },
     status: {
         type: String,
