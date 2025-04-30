@@ -55,10 +55,9 @@ const StudentSchema = new mongoose.Schema({
     enum: ['Active', 'Inactive'],
     default: 'Active'
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  transportationId: {
+     type: mongoose.Schema.Types.ObjectId, 
+     ref: 'Transportation' },
 });
 
 module.exports = mongoose.model('Student', StudentSchema); 
