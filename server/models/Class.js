@@ -7,9 +7,9 @@ const ClassSchema = new mongoose.Schema({
     trim: true,
     unique: true
   },
-  grade: {
+  cycleId: {
     type:  mongoose.Schema.Types.ObjectId,
-    ref: 'Grade'
+    ref: 'Cycle'
   },
   academicYear: {
     type: String,
