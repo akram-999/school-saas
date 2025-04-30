@@ -27,6 +27,6 @@ const schoolSchema = new mongoose.Schema({
     image: {
         type: String,
     },
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('School', schoolSchema);

@@ -39,6 +39,6 @@ const driverSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School',
   },
-})
+}, { timestamps: true })
 
 module.exports = mongoose.model('Driver', driverSchema);

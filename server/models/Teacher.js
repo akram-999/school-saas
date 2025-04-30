@@ -59,14 +59,10 @@ const TeacherSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Class'
   }],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
   schoolId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School',
   },
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Teacher', TeacherSchema); 

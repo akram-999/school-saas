@@ -56,10 +56,6 @@ const ClassSchema = new mongoose.Schema({
     type: Number,
     default: 40
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Class', ClassSchema); 

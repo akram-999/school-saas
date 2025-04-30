@@ -36,7 +36,7 @@ const activitySchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'School',
     },
-});
+}, { timestamps: true });
 
 const Activity = mongoose.model('Activity', activitySchema);
 

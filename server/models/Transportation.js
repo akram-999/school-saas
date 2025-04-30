@@ -7,7 +7,7 @@ const transportationSchema = new mongoose.Schema({
     trim: true,
     unique: true
   },
-  number: {
+  busNumber: {
     type: String,
     required: [true, 'Please add a number'],
     unique: true
@@ -37,6 +37,6 @@ const transportationSchema = new mongoose.Schema({
       ref: 'Student',
   },
   
-})
+}, { timestamps: true })
 
 module.exports = mongoose.model('Transportation', transportationSchema);

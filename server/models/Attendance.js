@@ -36,11 +36,7 @@ const AttendanceSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School',
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+}, { timestamps: true });
 
 // Prevent user from submitting more than one attendance record per day for the same person and class
 AttendanceSchema.index({ userId: 1, class: 1, date: 1 }, { unique: true });

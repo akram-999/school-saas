@@ -58,6 +58,6 @@ const StudentSchema = new mongoose.Schema({
   transportationId: {
      type: mongoose.Schema.Types.ObjectId, 
      ref: 'Transportation' },
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Student', StudentSchema); 
