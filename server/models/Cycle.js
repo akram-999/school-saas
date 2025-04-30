@@ -19,9 +19,6 @@ const CycleSchema = new mongoose.Schema({
   remarks: {
     type: String
   },
-  examDate: {
-    type: Date
-  },
   schoolId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School',
