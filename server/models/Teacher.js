@@ -13,6 +13,10 @@ const TeacherSchema = new mongoose.Schema({
     trim: true,
     maxlength: [50, 'Last name cannot be more than 50 characters']
   },
+  cin: {
+    type: String,
+    required: [true, 'Please add a cin'],
+  },
   email: {
     type: String,
     required: [true, 'Please add an email'],

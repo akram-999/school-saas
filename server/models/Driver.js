@@ -13,6 +13,10 @@ const driverSchema = new mongoose.Schema({
     trim: true,
     unique: true
   },
+  cin: {
+    type: String,
+    required: [true, 'Please add a cin'],
+  },
   email: {
     type: String,
     required: [true, 'Please add an email'],
