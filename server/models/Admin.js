@@ -6,7 +6,7 @@ const adminSchema = new mongoose.Schema({
     email: {type: String, unique: true},
     rol: {type: String, default: 'admin' },
     password: {type: String, required:true}
-});
+},{ timestamps: true });
 
 const Admin = mongoose.model("Admin", adminSchema);
 
