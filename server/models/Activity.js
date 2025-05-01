@@ -17,8 +17,7 @@ const activitySchema = new mongoose.Schema({
         type: String,
     },
     price: {
-        type: Number,
-        
+        type: Number,  
     },
     category: {
         type: String,

@@ -51,10 +51,6 @@ const TeacherSchema = new mongoose.Schema({
     enum: ['Active', 'On Leave', 'Resigned'],
     default: 'Active'
   },
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
   classes: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Class'

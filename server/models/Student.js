@@ -13,11 +13,35 @@ const StudentSchema = new mongoose.Schema({
     trim: true,
     maxlength: [50, 'Last name cannot be more than 50 characters']
   },
-  rollNumber: {
+  firstName_ar: {
     type: String,
-    required: [true, 'Please add a roll number'],
+    required: [true, 'Please add a first name'],
+    trim: true,
+    maxlength: [50, 'First name cannot be more than 50 characters']
+  },
+  lastName_ar: {
+    type: String,
+    required: [true, 'Please add a last name'],
+    trim: true,
+    maxlength: [50, 'Last name cannot be more than 50 characters']
+  },
+  pupilCode: {
+    type: String,
+    required: [true, 'Please add a pupil code'],
     unique: true,
     trim: true
+  },
+  palaceOfBirth: {
+    type: String,
+    required: [true, 'Please add a palace of birth'],
+  },
+  palaceOfBirth_ar: {
+    type: String,
+    required: [true, 'Please add a palace of birth'],
+  },
+  cin: {
+    type: String,
+    // required: [false, 'Please add a cin'],
   },
   email: {
     type: String,
@@ -27,6 +51,10 @@ const StudentSchema = new mongoose.Schema({
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
       'Please add a valid email'
     ]
+  },
+  nationality: {
+    type: String,
+    required: [true, 'Please add a nationality'],
   },
   phone: {
     type: String,
@@ -40,6 +68,9 @@ const StudentSchema = new mongoose.Schema({
     type: Date
   },
   address: {
+    type: String
+  },
+  address_ar: {
     type: String
   },
   class: {
