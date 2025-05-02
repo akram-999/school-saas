@@ -1,20 +1,22 @@
 const jwt = require("jsonwebtoken");
 
+// Generate token for admin
+const generateAdminToken = (admin) => {
+    return jwt.sign(
+        { id: admin._id, rol: 'admin' },
+        process.env.JWT_SEC,
+        { expiresIn: "3d" }
+    );
+};
 
-
-// For admin
-const adminToken = jwt.sign(
-    { id: admin._id, rol: 'admin' },
-    process.env.JWT_SEC,
-    { expiresIn: "3d" }
-);
-
-// For school
-const schoolToken = jwt.sign(
-    { id: school._id, rol: 'school' },
-    process.env.JWT_SEC,
-    { expiresIn: "3d" }
-);
+// Generate token for school
+const generateSchoolToken = (school) => {
+    return jwt.sign(
+        { id: school._id, rol: 'school' },
+        process.env.JWT_SEC,
+        { expiresIn: "3d" }
+    );
+};
 
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -63,8 +65,8 @@ const verifySchoolOrAdmin = (req, res, next) => {
 };
 
 module.exports = {
-    adminToken,
-    schoolToken,
+    generateAdminToken,
+    generateSchoolToken,
     verifyToken,
     verifyAdmin,
     verifySchool,

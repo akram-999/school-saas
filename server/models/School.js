@@ -13,6 +13,10 @@ const schoolSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    rol: {
+        type: String,
+        default: 'school' 
+    },
     email: {
         type: String,
         required: true,
