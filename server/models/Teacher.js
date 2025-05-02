@@ -1,68 +1,63 @@
 const mongoose = require('mongoose');
 
-const TeacherSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-    required: [true, 'Please add a first name'],
-    trim: true,
-    maxlength: [50, 'First name cannot be more than 50 characters']
-  },
-  lastName: {
-    type: String,
-    required: [true, 'Please add a last name'],
-    trim: true,
-    maxlength: [50, 'Last name cannot be more than 50 characters']
-  },
-  cin: {
-    type: String,
-    required: [true, 'Please add a cin'],
-  },
-  email: {
-    type: String,
-    required: [true, 'Please add an email'],
-    unique: true,
-    match: [
-      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-      'Please add a valid email'
-    ]
-  },
-  phone: {
-    type: String,
-    required: [true, 'Please add a phone number'],
-    maxlength: [20, 'Phone number cannot be longer than 20 characters']
-  },
-  subject: {
-    type: String,
-    required: [true, 'Please add a subject']
-  },
-  qualification: {
-    type: String,
-    required: [true, 'Please add qualification']
-  },
-  experience: {
-    type: Number,
-    required: [true, 'Please add years of experience']
-  },
-  address: {
-    type: String
-  },
-  joinDate: {
-    type: Date,
-    default: Date.now
-  },
-  status: {
-    type: String,
-    enum: ['Active', 'On Leave', 'Resigned'],
-    default: 'Active'
-  },
-  classes: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Class'
-  }],
-  schoolId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'School',
-  },
+const teacherSchema = new mongoose.Schema({
+    firstName: {
+        type: String,
+        required: true,
+    },
+    lastName: {
+        type: String,
+        required: true,
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+    },
+    password: {
+        type: String,
+        required: true,
+    },
+    phoneNumber: {
+        type: String,
+        match: [/^[0-9]{10,15}$/, 'Please enter a valid phone number']
+    },
+    address: {
+        type: String,
+    },
+    dateOfBirth: {
+        type: Date,
+    },
+    specialization: {
+        type: String,
+        required: true,
+    },
+    biography: {
+        type: String,
+    },
+    // Reference to the school this teacher belongs to
+    school: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'School',
+        required: true
+    },
+    // Classes/Subjects the teacher is assigned to
+    subjects: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Subject'
+    }],
+    image: {
+        type: String,
+    },
+    rol: {
+        type: String,
+        default: 'teacher'
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Teacher', TeacherSchema); 
+module.exports = mongoose.model('Teacher', teacherSchema); 

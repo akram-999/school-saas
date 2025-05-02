@@ -6,6 +6,10 @@ const adminRoutes = require("./routes/adminRoutes");
 const schoolRoutes = require("./routes/schoolRoutes");
 const activityRoutes = require("./routes/activityRoutes");
 const studentRoutes = require("./routes/studentRoutes");
+const teacherRoutes = require("./routes/teacherRoutes");
+const parentRoutes = require("./routes/parentRoutes");
+const subjectRoutes = require("./routes/subjectRoutes");
+const attendanceRoutes = require("./routes/attendanceRoutes");
 
 // Load env variables
 dotenv.config();
@@ -22,6 +26,10 @@ app.use("/api", adminRoutes);
 app.use("/api", schoolRoutes);
 app.use("/api", activityRoutes);
 app.use("/api", studentRoutes);
+app.use("/api", teacherRoutes);
+app.use("/api", parentRoutes);
+app.use("/api", subjectRoutes);
+app.use("/api", attendanceRoutes);
 
 // Default route
 app.get("/", (req, res) => {
