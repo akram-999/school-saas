@@ -5,7 +5,15 @@ const driverSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  firstName_ar: {
+    type: String,
+    required: true,
+  },
   lastName: {
+    type: String,
+    required: true,
+  },
+  lastName_ar: {
     type: String,
     required: true,
   },
@@ -23,6 +31,14 @@ const driverSchema = new mongoose.Schema({
   address: {
     type: String,
     required: true,
+  },
+  cin:{
+    type:String,
+    required:true
+  },
+  address_ar: {
+  type: String,
+  required: true,
   },
   // Reference to the school this driver works for
   school: {
@@ -43,10 +59,7 @@ const driverSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
-  dateOfHire: {
-    type: Date,
-    required: true
-  },
+  
   // Transportation vehicles assigned to this driver
   vehicles: [{
     type: mongoose.Schema.Types.ObjectId,
