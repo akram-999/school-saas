@@ -10,6 +10,10 @@ const teacherRoutes = require("./routes/teacherRoutes");
 const parentRoutes = require("./routes/parentRoutes");
 const subjectRoutes = require("./routes/subjectRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
+const cycleRoutes = require("./routes/cycleRoutes");
+const driverRoutes = require("./routes/driverRoutes");
+const transportationRoutes = require("./routes/transportationRoutes");
+const classRoutes = require("./routes/classRoutes");
 
 // Load env variables
 dotenv.config();
@@ -30,6 +34,10 @@ app.use("/api", teacherRoutes);
 app.use("/api", parentRoutes);
 app.use("/api", subjectRoutes);
 app.use("/api", attendanceRoutes);
+app.use("/api", cycleRoutes);
+app.use("/api", driverRoutes);
+app.use("/api", transportationRoutes);
+app.use("/api", classRoutes);
 
 // Default route
 app.get("/", (req, res) => {
