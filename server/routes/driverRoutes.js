@@ -8,14 +8,17 @@ router.post("/drivers", verifySchool, async (req, res) => {
     try {
         const { 
             firstName, 
-            lastName, 
+            lastName,
+            firstName_ar,
+            lastName_ar, 
             email, 
             phoneNumber, 
             address, 
             licenseNumber, 
             licenseExpiry, 
             dateOfBirth, 
-            dateOfHire, 
+            cin,
+            address_ar ,
             emergencyContact,
             image,
             notes
@@ -30,15 +33,18 @@ router.post("/drivers", verifySchool, async (req, res) => {
         // Create new driver
         const newDriver = new Driver({
             firstName,
+            firstName_ar,
             lastName,
+            lastName_ar,
             email,
             phoneNumber,
+            cin,
             address,
             school: req.user.id,
             licenseNumber,
             licenseExpiry,
             dateOfBirth,
-            dateOfHire,
+            address_ar,
             emergencyContact,
             image,
             notes,
@@ -89,15 +95,18 @@ router.get("/drivers/:id", verifySchool, async (req, res) => {
 router.put("/drivers/:id", verifySchool, async (req, res) => {
     try {
         const { 
-            firstName, 
-            lastName, 
+            firstName,
+            firstName_ar,
+            lastName,
+            lastName_ar,
             email, 
+            cin,
             phoneNumber, 
             address,
             licenseNumber,
             licenseExpiry,
             dateOfBirth,
-            dateOfHire,
+            address_ar,
             emergencyContact,
             image,
             status,
@@ -124,14 +133,17 @@ router.put("/drivers/:id", verifySchool, async (req, res) => {
         // Prepare update object
         const updateObj = {};
         if (firstName) updateObj.firstName = firstName;
+        if (firstName_ar) updateObj.firstName_ar = firstName_ar;
         if (lastName) updateObj.lastName = lastName;
+        if (lastName_ar) updateObj.lastName_ar = lastName_ar;
         if (email) updateObj.email = email;
         if (phoneNumber) updateObj.phoneNumber = phoneNumber;
         if (address) updateObj.address = address;
         if (licenseNumber) updateObj.licenseNumber = licenseNumber;
         if (licenseExpiry) updateObj.licenseExpiry = licenseExpiry;
         if (dateOfBirth) updateObj.dateOfBirth = dateOfBirth;
-        if (dateOfHire) updateObj.dateOfHire = dateOfHire;
+        if (cin) updateObj.cin = cin;
+        if (address_ar) updateObj.address_ar = address_ar;
         if (emergencyContact) updateObj.emergencyContact = emergencyContact;
         if (image) updateObj.image = image;
         if (status) updateObj.status = status;
