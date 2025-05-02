@@ -18,6 +18,15 @@ const generateSchoolToken = (school) => {
     );
 };
 
+// Generate token for student
+const generateStudentToken = (student) => {
+    return jwt.sign(
+        { id: student._id, rol: 'student' },
+        process.env.JWT_SEC,
+        { expiresIn: "3d" }
+    );
+};
+
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -54,6 +63,16 @@ const verifySchool = (req, res, next) => {
     });
 };
 
+const verifyStudent = (req, res, next) => {
+    verifyToken(req, res, () => {
+        if (req.user.rol === 'student') {
+            next();
+        } else {
+            return res.status(403).json({ message: "You are not authorized as a student!" });
+        }
+    });
+};
+
 const verifySchoolOrAdmin = (req, res, next) => {
     verifyToken(req, res, () => {
         if (req.user.rol === 'school' || req.user.rol === 'admin') {
@@ -64,11 +83,35 @@ const verifySchoolOrAdmin = (req, res, next) => {
     });
 };
 
+const verifySchoolOrStudent = (req, res, next) => {
+    verifyToken(req, res, () => {
+        if (req.user.rol === 'school' || req.user.rol === 'student') {
+            next();
+        } else {
+            return res.status(403).json({ message: "You are not authorized!" });
+        }
+    });
+};
+
+const verifyAny = (req, res, next) => {
+    verifyToken(req, res, () => {
+        if (req.user.rol === 'admin' || req.user.rol === 'school' || req.user.rol === 'student') {
+            next();
+        } else {
+            return res.status(403).json({ message: "You are not authorized!" });
+        }
+    });
+};
+
 module.exports = {
     generateAdminToken,
     generateSchoolToken,
+    generateStudentToken,
     verifyToken,
     verifyAdmin,
     verifySchool,
-    verifySchoolOrAdmin
+    verifyStudent,
+    verifySchoolOrAdmin,
+    verifySchoolOrStudent,
+    verifyAny
 };

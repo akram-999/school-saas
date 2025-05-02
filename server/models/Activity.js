@@ -9,19 +9,32 @@ const activitySchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    date: {
+    startDate: {
+        type: Date,
+        required: true,
+    },
+    endDate: {
         type: Date,
         required: true,
     },
     location: {
         type: String,
+        required: true,
+    },
+    capacity: {
+        type: Number,
+        required: true,
+        min: [1, 'Capacity must be at least 1']
     },
     price: {
-        type: Number,  
+        type: Number,
+        default: 0,
+        min: [0, 'Price cannot be negative']
     },
     category: {
         type: String,
-        required: true,
+        enum: ['sports', 'academic', 'art', 'music', 'other'],
+        default: 'other'
     },
     status: {
         type: String,
@@ -37,6 +50,4 @@ const activitySchema = new mongoose.Schema({
     },
 }, { timestamps: true });
 
-const Activity = mongoose.model('Activity', activitySchema);
-
-module.exports = Activity;
+module.exports = mongoose.model('Activity', activitySchema);
