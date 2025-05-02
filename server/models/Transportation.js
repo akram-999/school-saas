@@ -16,7 +16,7 @@ const transportationSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a type']
   },
-  driverId: {
+  driver: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Driver'
   },
@@ -26,13 +26,17 @@ const transportationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    required: [true, 'Please add a status']
+    enum: ['active', 'maintenance', 'inactive'],
+    default: 'active'
   },
-  schoolId: {
+  notes: {
+    type: String
+  },  
+  school: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School',
   },
-  studentId: {
+  student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Student',
   },

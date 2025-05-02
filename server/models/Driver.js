@@ -3,46 +3,80 @@ const mongoose = require('mongoose');
 const driverSchema = new mongoose.Schema({
   firstName: {
     type: String,
-    required: [true, 'Please add a first name'],
-    trim: true,
-    unique: true
+    required: true,
   },
   lastName: {
     type: String,
-    required: [true, 'Please add a last name'],
-    trim: true,
-    unique: true
-  },
-  cin: {
-    type: String,
-    required: [true, 'Please add a cin'],
+    required: true,
   },
   email: {
     type: String,
-    required: [true, 'Please add an email'],
+    required: true,
     unique: true,
-    match: [
-      /^\S+@\S+\.\S+$/,
-      'Please add a valid email address'
-    ]
+    match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
   },
-  phone: {
+  phoneNumber: {
     type: String,
-    required: [true, 'Please add a phone number'],
-    unique: true,
-    match: [
-      /^\d{10}$/,
-      'Please add a valid phone number'
-    ]
+    required: true,
+    match: [/^[0-9]{10,15}$/, 'Please enter a valid phone number']
   },
   address: {
     type: String,
-    required: [true, 'Please add an address']
+    required: true,
   },
-  schoolId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'School',
+  // Reference to the school this driver works for
+  school: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'School',
+    required: true
   },
-}, { timestamps: true })
+  licenseNumber: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  licenseExpiry: {
+    type: Date,
+    required: true
+  },
+  dateOfBirth: {
+    type: Date,
+    required: true
+  },
+  dateOfHire: {
+    type: Date,
+    required: true
+  },
+  // Transportation vehicles assigned to this driver
+  vehicles: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Transportation'
+  }],
+  emergencyContact: {
+    name: {
+      type: String,
+      required: true
+    },
+    relationship: {
+      type: String,
+      required: true
+    },
+    phoneNumber: {
+      type: String,
+      required: true
+    }
+  },
+  image: {
+    type: String,
+  },
+  status: {
+    type: String,
+    enum: ['active', 'on leave', 'terminated'],
+    default: 'active'
+  },
+  notes: {
+    type: String
+  }
+}, { timestamps: true });
 
 module.exports = mongoose.model('Driver', driverSchema);

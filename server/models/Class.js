@@ -1,61 +1,63 @@
 const mongoose = require('mongoose');
 
-const ClassSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, 'Please add a class name'],
-    trim: true,
-    unique: true
-  },
-  cycleId: {
-    type:  mongoose.Schema.Types.ObjectId,
-    ref: 'Cycle'
-  },
-  academicYear: {
-    type: String,
-    required: [true, 'Please add academic year']
-  },
-  schoolId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'School',
-  },
-  classTeacher: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Teacher'
-  },
-  subjects: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Subject'
-  }],
-  students: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Student'
-  }],
-  schedule: [{
-    day: {
-      type: String,
-      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+const classSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
     },
-    periods: [{
-      subject: {
+    grade: {
+        type: String,
+        required: true,
+    },
+    section: {
+        type: String,
+        required: true,
+    },
+    capacity: {
+        type: Number,
+        required: true,
+        min: [1, 'Capacity must be at least 1']
+    },
+    // Reference to the school this class belongs to
+    school: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Subject'
-      },
-      teacher: {
+        ref: 'School',
+        required: true
+    },
+    // Assigned teacher (class teacher/homeroom teacher)
+    teacher: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Teacher'
-      },
-      startTime: String,
-      endTime: String
-    }]
-  }],
-  room: {
-    type: String
-  },
-  maxCapacity: {
-    type: Number,
-    default: 40
-  },
+    },
+    // Students enrolled in this class
+    students: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Student'
+    }],
+    // Subjects taught in this class
+    subjects: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Subject'
+    }],
+    // Associated cycle
+    cycle: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Cycle'
+    },
+    academicYear: {
+        type: String,
+        required: true
+    },
+    room: {
+        type: String
+    },
+    schedule: {
+        type: String
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Class', ClassSchema); 
+module.exports = mongoose.model('Class', classSchema); 
