@@ -31,11 +31,11 @@ const subjectSchema = new mongoose.Schema({
         ref: 'Cycle'
     },
     // Number of credits/hours
-    credits: {
-        type: Number,
-        required: true,
-        min: 1
-    },
+    // credits: {
+    //     type: Number,
+    //     required: true,
+    //     min: 1
+    // },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Subject', subjectSchema); 

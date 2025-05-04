@@ -9,6 +9,18 @@ const teacherSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    firstName_ar: {
+        type: String,
+        required: [true, 'Please add a first name'],
+        trim: true,
+        maxlength: [50, 'First name cannot be more than 50 characters']
+    },
+    lastName_ar: {
+        type: String,
+        required: [true, 'Please add a last name'],
+        trim: true,
+        maxlength: [50, 'Last name cannot be more than 50 characters']
+    },
     email: {
         type: String,
         required: true,
@@ -26,15 +38,31 @@ const teacherSchema = new mongoose.Schema({
     address: {
         type: String,
     },
+    address_ar: {
+        type: String,
+    },
     dateOfBirth: {
         type: Date,
+    },
+    palaceOfBirth: {
+        type: String,
+        required: [true, 'Please add a palace of birth'],
+    },
+    palaceOfBirth_ar: {
+        type: String,
+        required: [true, 'Please add a palace of birth'],
+    },
+    cin: {
+        type: String,
+        required: [true, 'Please add a cin'],
+    },
+    nationality: {
+        type: String,
+        required: [true, 'Please add a nationality'],
     },
     specialization: {
         type: String,
         required: true,
-    },
-    biography: {
-        type: String,
     },
     // Reference to the school this teacher belongs to
     school: {
@@ -54,10 +82,11 @@ const teacherSchema = new mongoose.Schema({
         type: String,
         default: 'teacher'
     },
-    isActive: {
-        type: Boolean,
-        default: true
-    }
+    status: {
+        type: String,
+        enum: ['Active', 'Inactive'],
+        default: 'Active'
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Teacher', teacherSchema); 
