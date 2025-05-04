@@ -1,6 +1,8 @@
 const router = require("express").Router();
 const Activity = require("../models/Activity");
-const { verifySchool, verifyAdmin, verifySchoolOrAdmin } = require("../config/jwt");
+const { verifyToken, verifySchool, verifyAdmin, verifySchoolOrAdmin } = require("../config/jwt");
+const Student = require("../models/Student");
+const Guard = require("../models/Guard");
 
 // Create a new activity (School only)
 router.post("/activities", verifySchool, async (req, res) => {
@@ -128,8 +130,8 @@ router.delete("/activities/:id", verifySchoolOrAdmin, async (req, res) => {
     }
 });
 
-// Register a student for an activity (to be implemented when Student model is available)
-router.post("/activities/:id/register", async (req, res) => {
+// Register a student for an activity (School or Guard can register students)
+router.post("/activities/:id/register", verifyToken, async (req, res) => {
     try {
         const activity = await Activity.findById(req.params.id);
         
@@ -147,8 +149,44 @@ router.post("/activities/:id/register", async (req, res) => {
             return res.status(400).json({ message: "This activity is already at full capacity" });
         }
         
-        // Check if student is already registered
+        // Get student ID
         const studentId = req.body.studentId;
+        if (!studentId) {
+            return res.status(400).json({ message: "Student ID is required" });
+        }
+        
+        // Find the student
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+        
+        // Check permissions based on role
+        if (req.user.rol === 'school') {
+            // School can only register students from their school
+            if (student.school.toString() !== req.user.id) {
+                return res.status(403).json({ message: "You can only register students from your school" });
+            }
+        } else if (req.user.rol === 'guard') {
+            // Guard can only register students from their school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            
+            if (student.school.toString() !== guard.school.toString()) {
+                return res.status(403).json({ message: "You can only register students from your school" });
+            }
+        } else if (req.user.rol === 'student') {
+            // Students can only register themselves
+            if (studentId !== req.user.id) {
+                return res.status(403).json({ message: "You can only register yourself for activities" });
+            }
+        } else {
+            return res.status(403).json({ message: "You are not authorized to register students for activities" });
+        }
+        
+        // Check if student is already registered
         if (activity.participants.includes(studentId)) {
             return res.status(400).json({ message: "Student is already registered for this activity" });
         }
@@ -157,14 +195,21 @@ router.post("/activities/:id/register", async (req, res) => {
         activity.participants.push(studentId);
         await activity.save();
         
+        // Add activity to student activities
+        if (!student.activities) {
+            student.activities = [];
+        }
+        student.activities.push(activity._id);
+        await student.save();
+        
         res.status(200).json({ message: "Student successfully registered for activity" });
     } catch (error) {
         res.status(500).json({ message: "Error registering for activity", error: error.message });
     }
 });
 
-// Deregister a student from an activity (to be implemented when Student model is available)
-router.post("/activities/:id/deregister", async (req, res) => {
+// Deregister a student from an activity (School or Guard can deregister students)
+router.post("/activities/:id/deregister", verifyToken, async (req, res) => {
     try {
         const activity = await Activity.findById(req.params.id);
         
@@ -172,13 +217,62 @@ router.post("/activities/:id/deregister", async (req, res) => {
             return res.status(404).json({ message: "Activity not found" });
         }
         
-        // Remove student from participants
+        // Get student ID
         const studentId = req.body.studentId;
+        if (!studentId) {
+            return res.status(400).json({ message: "Student ID is required" });
+        }
+        
+        // Find the student
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+        
+        // Check permissions based on role
+        if (req.user.rol === 'school') {
+            // School can only deregister students from their school
+            if (student.school.toString() !== req.user.id) {
+                return res.status(403).json({ message: "You can only deregister students from your school" });
+            }
+        } else if (req.user.rol === 'guard') {
+            // Guard can only deregister students from their school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            
+            if (student.school.toString() !== guard.school.toString()) {
+                return res.status(403).json({ message: "You can only deregister students from your school" });
+            }
+        } else if (req.user.rol === 'student') {
+            // Students can only deregister themselves
+            if (studentId !== req.user.id) {
+                return res.status(403).json({ message: "You can only deregister yourself from activities" });
+            }
+        } else {
+            return res.status(403).json({ message: "You are not authorized to deregister students from activities" });
+        }
+        
+        // Check if student is registered for the activity
+        if (!activity.participants.some(id => id.toString() === studentId)) {
+            return res.status(400).json({ message: "Student is not registered for this activity" });
+        }
+        
+        // Remove student from participants
         activity.participants = activity.participants.filter(
             participant => participant.toString() !== studentId
         );
         
         await activity.save();
+        
+        // Remove activity from student activities
+        if (student.activities && student.activities.length > 0) {
+            student.activities = student.activities.filter(
+                act => act.toString() !== activity._id.toString()
+            );
+            await student.save();
+        }
         
         res.status(200).json({ message: "Student successfully deregistered from activity" });
     } catch (error) {
