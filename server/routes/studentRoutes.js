@@ -82,8 +82,8 @@ router.post("/student/login", async (req, res) => {
     }
 });
 
-// Get Student Profile (Protected route)
-router.get("/student/profile", verifyStudent, async (req, res) => {
+// Get Student Profile 
+router.get("/student/profile", async (req, res) => {
     try {
         const student = await Student.findById(req.user.id)
             .select("-password")
@@ -98,10 +98,70 @@ router.get("/student/profile", verifyStudent, async (req, res) => {
     }
 });
 
-// Update Student Profile (Protected route)
-router.put("/student/profile", verifyStudent, async (req, res) => {
+// Update Student Profile (Student can update own profile)
+router.put("/student/profile", verifyToken, async (req, res) => {
     try {
-        const { firstName, lastName, email, password, dateOfBirth, phoneNumber, address, image } = req.body;
+        // Check if request is from the student themselves
+        if (req.user.rol === 'student') {
+            return updateStudentProfile(req.user.id, req.body, res);
+        } else {
+            return res.status(403).json({ message: "Use the appropriate endpoint to update student information" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Error updating profile", error: error.message });
+    }
+});
+
+// Update Student by ID (School, Guard can update any student in their school)
+router.put("/students/:id", verifyToken, async (req, res) => {
+    try {
+        const studentId = req.params.id;
+        
+        // Find the student
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+        
+        // Check permissions based on role
+        if (req.user.rol === 'school') {
+            // School can update any student in their school
+            if (student.school.toString() !== req.user.id) {
+                return res.status(403).json({ message: "You can only update students in your school" });
+            }
+            
+            return updateStudentProfile(studentId, req.body, res);
+            
+        } else if (req.user.rol === 'guard') {
+            // Guard can update any student in their school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            
+            if (student.school.toString() !== guard.school.toString()) {
+                return res.status(403).json({ message: "You can only update students in your school" });
+            }
+            
+            return updateStudentProfile(studentId, req.body, res);
+            
+        } else if (req.user.rol === 'student') {
+            // Students can only update their own profile through /student/profile
+            return res.status(403).json({ 
+                message: "Students should use the /student/profile endpoint to update their profile" 
+            });
+        } else {
+            return res.status(403).json({ message: "You are not authorized to update student information" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Error updating student", error: error.message });
+    }
+});
+
+// Helper function to update student profile
+async function updateStudentProfile(studentId, updateData, res) {
+    try {
+        const { firstName, lastName, email, password, dateOfBirth, phoneNumber, address, image, class: classId } = updateData;
         
         // Prepare update object
         const updateObj = {};
@@ -112,6 +172,7 @@ router.put("/student/profile", verifyStudent, async (req, res) => {
         if (phoneNumber) updateObj.phoneNumber = phoneNumber;
         if (address) updateObj.address = address;
         if (image) updateObj.image = image;
+        if (classId) updateObj.class = classId;
         
         // Handle password update if provided
         if (password) {
@@ -121,16 +182,16 @@ router.put("/student/profile", verifyStudent, async (req, res) => {
         
         // Update student
         const updatedStudent = await Student.findByIdAndUpdate(
-            req.user.id,
+            studentId,
             { $set: updateObj },
             { new: true }
         ).select("-password");
         
-        res.status(200).json(updatedStudent);
+        return res.status(200).json(updatedStudent);
     } catch (error) {
-        res.status(500).json({ message: "Error updating profile", error: error.message });
+        return res.status(500).json({ message: "Error updating profile", error: error.message });
     }
-});
+}
 
 // Register for an activity (Student protected route)
 router.post("/student/activities/:activityId/register", verifyStudent, async (req, res) => {
