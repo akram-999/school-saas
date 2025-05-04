@@ -1,9 +1,20 @@
 const router = require("express").Router();
 const Student = require("../models/Student");
 const Activity = require("../models/Activity");
+const Guard = require("../models/Guard");
+const Teacher = require("../models/Teacher");
+const Class = require("../models/Class");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { verifySchool, verifyAdmin, verifyStudent, verifySchoolOrAdmin, generateStudentToken } = require("../config/jwt");
+const { 
+    verifyToken,
+    verifySchool, 
+    verifyAdmin, 
+    verifyStudent, 
+    verifyTeacher,
+    verifySchoolOrAdmin, 
+    generateStudentToken 
+} = require("../config/jwt");
 
 // Student Registration (Only School can register)
 router.post("/student/register", verifySchool, async (req, res) => {
@@ -188,19 +199,40 @@ router.post("/student/activities/:activityId/deregister", verifyStudent, async (
     }
 });
 
-// Get all students (School or Admin only)
-router.get("/students", verifySchoolOrAdmin, async (req, res) => {
+// Get all students (Admin, School, or Guard)
+router.get("/students", verifyToken, async (req, res) => {
     try {
         let query = {};
+        let populateOptions = {
+            path: "school",
+            select: "name"
+        };
         
-        // If school is making the request, only show students associated with that school
+        // Different query based on user role
         if (req.user.rol === 'school') {
+            // Schools can only see students in their school
             query.school = req.user.id;
+        } else if (req.user.rol === 'guard') {
+            // Guards can only see students in their school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            query.school = guard.school;
+        } else if (req.user.rol === 'teacher') {
+            // Teachers should use the other route for students
+            return res.status(403).json({ 
+                message: "Teachers should use the /teacher/students endpoint to view their students" 
+            });
+        } else if (req.user.rol !== 'admin') {
+            // Only admin, school, or guard can access this route
+            return res.status(403).json({ message: "You are not authorized to view students" });
         }
         
         const students = await Student.find(query)
             .select("-password")
-            .populate("school", "name");
+            .populate(populateOptions)
+            .populate("class", "name");
             
         res.status(200).json(students);
     } catch (error) {
@@ -208,14 +240,58 @@ router.get("/students", verifySchoolOrAdmin, async (req, res) => {
     }
 });
 
-// Delete student (Admin only)
-router.delete("/student/:id", verifyAdmin, async (req, res) => {
+// Get students for a teacher (Teacher only)
+router.get("/teacher/students", verifyTeacher, async (req, res) => {
     try {
-        const student = await Student.findByIdAndDelete(req.params.id);
+        // Get the teacher's subjects and classes
+        const teacher = await Teacher.findById(req.user.id)
+            .populate("subjects");
+        
+        if (!teacher) {
+            return res.status(404).json({ message: "Teacher not found" });
+        }
+        
+        // Get all classes associated with teacher's subjects
+        const subjectIds = teacher.subjects.map(subject => subject._id);
+        
+        const classes = await Class.find({
+            subjects: { $in: subjectIds }
+        });
+        
+        const classIds = classes.map(cls => cls._id);
+        
+        // Find students in these classes
+        const students = await Student.find({
+            class: { $in: classIds },
+            school: teacher.school
+        })
+        .select("-password")
+        .populate("class", "name")
+        .populate("school", "name");
+        
+        res.status(200).json(students);
+    } catch (error) {
+        res.status(500).json({ message: "Error retrieving students", error: error.message });
+    }
+});
+
+// Delete student (Admin or School)
+router.delete("/student/:id", verifySchoolOrAdmin, async (req, res) => {
+    try {
+        let studentQuery = { _id: req.params.id };
+        
+        // If school is making the request, only allow deleting students of that school
+        if (req.user.rol === 'school') {
+            studentQuery.school = req.user.id;
+        }
+        
+        const student = await Student.findOne(studentQuery);
         
         if (!student) {
-            return res.status(404).json({ message: "Student not found" });
+            return res.status(404).json({ message: "Student not found or you don't have permission to delete this student" });
         }
+        
+        await Student.findByIdAndDelete(req.params.id);
         
         // Also remove student from all activities they were registered for
         await Activity.updateMany(
