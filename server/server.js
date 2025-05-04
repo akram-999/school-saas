@@ -14,6 +14,7 @@ const cycleRoutes = require("./routes/cycleRoutes");
 const driverRoutes = require("./routes/driverRoutes");
 const transportationRoutes = require("./routes/transportationRoutes");
 const classRoutes = require("./routes/classRoutes");
+const guardRoutes = require("./routes/guardRoutes");
 
 // Load env variables
 dotenv.config();
@@ -38,6 +39,7 @@ app.use("/api", cycleRoutes);
 app.use("/api", driverRoutes);
 app.use("/api", transportationRoutes);
 app.use("/api", classRoutes);
+app.use("/api", guardRoutes);
 
 // Default route
 app.get("/", (req, res) => {

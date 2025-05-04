@@ -45,6 +45,15 @@ const generateParentToken = (parent) => {
     );
 };
 
+// Generate token for guard
+const generateGuardToken = (guard) => {
+    return jwt.sign(
+        { id: guard._id, rol: 'guard' },
+        process.env.JWT_SEC,
+        { expiresIn: "3d" }
+    );
+};
+
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -111,6 +120,16 @@ const verifyParent = (req, res, next) => {
     });
 };
 
+const verifyGuard = (req, res, next) => {
+    verifyToken(req, res, () => {
+        if (req.user.rol === 'guard') {
+            next();
+        } else {
+            return res.status(403).json({ message: "You are not authorized as a guard!" });
+        }
+    });
+};
+
 const verifySchoolOrAdmin = (req, res, next) => {
     verifyToken(req, res, () => {
         if (req.user.rol === 'school' || req.user.rol === 'admin') {
@@ -151,6 +170,16 @@ const verifyParentOrSchool = (req, res, next) => {
     });
 };
 
+const verifyGuardOrSchool = (req, res, next) => {
+    verifyToken(req, res, () => {
+        if (req.user.rol === 'guard' || req.user.rol === 'school') {
+            next();
+        } else {
+            return res.status(403).json({ message: "You are not authorized!" });
+        }
+    });
+};
+
 const verifyTeacherOrSchoolOrAdmin = (req, res, next) => {
     verifyToken(req, res, () => {
         if (req.user.rol === 'teacher' || req.user.rol === 'school' || req.user.rol === 'admin') {
@@ -178,16 +207,19 @@ module.exports = {
     generateStudentToken,
     generateTeacherToken,
     generateParentToken,
+    generateGuardToken,
     verifyToken,
     verifyAdmin,
     verifySchool,
     verifyStudent,
     verifyTeacher,
     verifyParent,
+    verifyGuard,
     verifySchoolOrAdmin,
     verifySchoolOrTeacher,
     verifySchoolOrStudent,
     verifyParentOrSchool,
+    verifyGuardOrSchool,
     verifyTeacherOrSchoolOrAdmin,
     verifyAny
 };

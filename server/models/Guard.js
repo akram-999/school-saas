@@ -24,6 +24,10 @@ const guardSchema = new mongoose.Schema({
       unique: true,
       match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
     },
+    password: {
+      type: String,
+      required: true,
+    },
     phoneNumber: {
       type: String,
       required: true,
@@ -38,8 +42,8 @@ const guardSchema = new mongoose.Schema({
       required:true
     },
     address_ar: {
-    type: String,
-    required: true,
+        type: String,
+        required: true,
     },
     rol:{
         type:String,
@@ -54,7 +58,7 @@ const guardSchema = new mongoose.Schema({
       type: Date,
       required: true
     },
-    
+
 }, { timestamps: true })
 
 const Guard = mongoose.model('Guard', guardSchema);
