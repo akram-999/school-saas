@@ -53,17 +53,13 @@ const studentSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please add a nationality'],
     },
-    phone: {
-        type: String,
-        maxlength: [20, 'Phone number cannot be longer than 20 characters']
-    },
     phoneNumber: {
         type: String,
         match: [/^[0-9]{10,15}$/, 'Please enter a valid phone number']
     },
     gender: {
         type: String,
-        enum: ['Male', 'Female', 'Other']
+        enum: ['Male', 'Female']
     },
     dateOfBirth: {
         type: Date,
@@ -103,10 +99,6 @@ const studentSchema = new mongoose.Schema({
         type: String,
         default: 'student'
     },
-    isActive: {
-        type: Boolean,
-        default: true
-    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Student', studentSchema); 

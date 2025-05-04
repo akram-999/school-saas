@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 
-const accompanimentSchema = new mongoose.Schema({
+const guardSchema = new mongoose.Schema({
     firstName: {
       type: String,
       required: true,
@@ -27,27 +27,36 @@ const accompanimentSchema = new mongoose.Schema({
     phoneNumber: {
       type: String,
       required: true,
-      match: [/^[0-9]{10,15}$/, 'Please enter a valid phone number']
+      
     },
     address: {
       type: String,
       required: true,
     },
     cin:{
-        type:String,
-        required:true
+      type:String,
+      required:true
     },
     address_ar: {
-      type: String,
-      required: true,
+    type: String,
+    required: true,
     },
-    // Reference to the school this driver works for
+    rol:{
+        type:String,
+        default:'guard'
+    },
     school: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School',
       required: true
     },
+    dateOfBirth: {
+      type: Date,
+      required: true
+    },
     
-});
+}, { timestamps: true })
 
-module.exports = mongoose.model('Accompaniment', accompanimentSchema);
+const Guard = mongoose.model('Guard', guardSchema);
+
+module.exports = Guard;
