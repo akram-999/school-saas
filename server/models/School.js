@@ -9,7 +9,10 @@ const schoolSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    phone: {
+    address_ar: {
+        type: String,
+    },
+    phoneNumber: {
         type: String,
         required: true,
     },
