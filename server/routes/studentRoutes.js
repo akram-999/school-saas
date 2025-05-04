@@ -5,10 +5,10 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { verifySchool, verifyAdmin, verifyStudent, verifySchoolOrAdmin, generateStudentToken } = require("../config/jwt");
 
-// Student Registration (Public or School can register)
-router.post("/student/register", async (req, res) => {
+// Student Registration (Only School can register)
+router.post("/student/register", verifySchool, async (req, res) => {
     try {
-        const { firstName, lastName, email, password, dateOfBirth, phoneNumber, address, school } = req.body;
+        const { firstName, lastName, email, password, dateOfBirth, phoneNumber, address } = req.body;
         
         // Check if student exists
         const exists = await Student.findOne({ email });
@@ -29,7 +29,7 @@ router.post("/student/register", async (req, res) => {
             dateOfBirth,
             phoneNumber,
             address,
-            school,
+            school: req.user.id, // Set school to the authenticated school's ID
         });
 
         // Save student
