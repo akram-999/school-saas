@@ -3,12 +3,34 @@ const Class = require("../models/Class");
 const Student = require("../models/Student");
 const Teacher = require("../models/Teacher");
 const Subject = require("../models/Subject");
-const { verifySchool, verifyTeacher, verifySchoolOrTeacher } = require("../config/jwt");
+const Guard = require("../models/Guard");
+const jwt = require("jsonwebtoken");
+const { verifySchool, verifyTeacher, verifySchoolOrTeacher, verifyGuardOrSchool } = require("../config/jwt");
 
-// Create a new class (School only)
-router.post("/classes", verifySchool, async (req, res) => {
+// Helper function to get school ID based on user role
+const getSchoolId = async (req) => {
+    if (req.user.rol === 'school') {
+        return req.user.id;
+    } else if (req.user.rol === 'guard') {
+        const guard = await Guard.findById(req.user.id);
+        if (!guard) {
+            throw new Error("Guard not found");
+        }
+        return guard.school;
+    }
+    return null;
+};
+
+// Create a new class (School or Guard)
+router.post("/classes", verifyGuardOrSchool, async (req, res) => {
     try {
         const { name, grade, section, capacity, teacher, subjects, cycle, academicYear, room, schedule } = req.body;
+        
+        // Get the school ID based on user role
+        const schoolId = await getSchoolId(req);
+        if (!schoolId) {
+            return res.status(404).json({ message: "School not found" });
+        }
         
         // Create new class
         const newClass = new Class({
@@ -22,7 +44,7 @@ router.post("/classes", verifySchool, async (req, res) => {
             academicYear,
             room,
             schedule,
-            school: req.user.id,
+            school: schoolId,
             students: []
         });
 
@@ -50,10 +72,16 @@ router.post("/classes", verifySchool, async (req, res) => {
     }
 });
 
-// Get all classes for a school
-router.get("/classes", verifySchool, async (req, res) => {
+// Get all classes for a school (School or Guard)
+router.get("/classes", verifyGuardOrSchool, async (req, res) => {
     try {
-        const classes = await Class.find({ school: req.user.id })
+        // Get the school ID based on user role
+        const schoolId = await getSchoolId(req);
+        if (!schoolId) {
+            return res.status(404).json({ message: "School not found" });
+        }
+        
+        const classes = await Class.find({ school: schoolId })
             .populate("teacher", "firstName lastName email")
             .populate("subjects", "name code")
             .populate("cycle", "name type");
@@ -64,21 +92,43 @@ router.get("/classes", verifySchool, async (req, res) => {
     }
 });
 
-// Get a specific class
-router.get("/classes/:id", verifySchoolOrTeacher, async (req, res) => {
+// Get a specific class (School, Teacher, or Guard)
+router.get("/classes/:id", async (req, res) => {
     try {
         const query = { _id: req.params.id };
+        let hasAccess = false;
+        let schoolId = null;
         
-        // If teacher is making the request, verify they're assigned to this class
-        if (req.user.rol === 'teacher') {
-            const teacherClasses = await Class.find({ teacher: req.user.id });
-            const isTeacherClass = teacherClasses.some(cls => cls._id.toString() === req.params.id);
-            
-            if (!isTeacherClass) {
-                return res.status(403).json({ message: "You don't have permission to view this class" });
+        // Check authorization based on user role from token
+        const authHeader = req.headers.authorization;
+        if (authHeader) {
+            const token = authHeader.split(" ")[1];
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SEC);
+                
+                if (decoded.rol === 'school') {
+                    schoolId = decoded.id;
+                    query.school = schoolId;
+                    hasAccess = true;
+                } else if (decoded.rol === 'teacher') {
+                    const teacherClasses = await Class.find({ teacher: decoded.id });
+                    hasAccess = teacherClasses.some(cls => cls._id.toString() === req.params.id);
+                } else if (decoded.rol === 'guard') {
+                    const guard = await Guard.findById(decoded.id);
+                    if (guard) {
+                        schoolId = guard.school;
+                        query.school = schoolId;
+                        hasAccess = true;
+                    }
+                }
+            } catch (error) {
+                // Invalid token
+                return res.status(401).json({ message: "Invalid token" });
             }
-        } else if (req.user.rol === 'school') {
-            query.school = req.user.id;
+        }
+        
+        if (!hasAccess) {
+            return res.status(403).json({ message: "You don't have permission to view this class" });
         }
         
         const classDetails = await Class.findOne(query)
@@ -97,14 +147,20 @@ router.get("/classes/:id", verifySchoolOrTeacher, async (req, res) => {
     }
 });
 
-// Update a class (School only)
-router.put("/classes/:id", verifySchool, async (req, res) => {
+// Update a class (School or Guard)
+router.put("/classes/:id", verifyGuardOrSchool, async (req, res) => {
     try {
         const { name, grade, section, capacity, teacher, subjects, cycle, academicYear, room, schedule, isActive } = req.body;
         
+        // Get the school ID based on user role
+        const schoolId = await getSchoolId(req);
+        if (!schoolId) {
+            return res.status(404).json({ message: "School not found" });
+        }
+        
         const classDetails = await Class.findOne({
             _id: req.params.id,
-            school: req.user.id
+            school: schoolId
         });
         
         if (!classDetails) {
@@ -182,12 +238,18 @@ router.put("/classes/:id", verifySchool, async (req, res) => {
     }
 });
 
-// Delete a class (School only)
-router.delete("/classes/:id", verifySchool, async (req, res) => {
+// Delete a class (School or Guard)
+router.delete("/classes/:id", verifyGuardOrSchool, async (req, res) => {
     try {
+        // Get the school ID based on user role
+        const schoolId = await getSchoolId(req);
+        if (!schoolId) {
+            return res.status(404).json({ message: "School not found" });
+        }
+        
         const classDetails = await Class.findOne({
             _id: req.params.id,
-            school: req.user.id
+            school: schoolId
         });
         
         if (!classDetails) {
@@ -225,8 +287,8 @@ router.delete("/classes/:id", verifySchool, async (req, res) => {
     }
 });
 
-// Add a student to a class (School only)
-router.post("/classes/:id/students", verifySchool, async (req, res) => {
+// Add a student to a class (School or Guard)
+router.post("/classes/:id/students", verifyGuardOrSchool, async (req, res) => {
     try {
         const { studentId } = req.body;
         
@@ -234,9 +296,15 @@ router.post("/classes/:id/students", verifySchool, async (req, res) => {
             return res.status(400).json({ message: "Student ID is required" });
         }
         
+        // Get the school ID based on user role
+        const schoolId = await getSchoolId(req);
+        if (!schoolId) {
+            return res.status(404).json({ message: "School not found" });
+        }
+        
         const classDetails = await Class.findOne({
             _id: req.params.id,
-            school: req.user.id
+            school: schoolId
         });
         
         if (!classDetails) {
@@ -245,7 +313,7 @@ router.post("/classes/:id/students", verifySchool, async (req, res) => {
         
         const student = await Student.findOne({
             _id: studentId,
-            school: req.user.id
+            school: schoolId
         });
         
         if (!student) {
@@ -273,12 +341,18 @@ router.post("/classes/:id/students", verifySchool, async (req, res) => {
     }
 });
 
-// Remove a student from a class (School only)
-router.delete("/classes/:id/students/:studentId", verifySchool, async (req, res) => {
+// Remove a student from a class (School or Guard)
+router.delete("/classes/:id/students/:studentId", verifyGuardOrSchool, async (req, res) => {
     try {
+        // Get the school ID based on user role
+        const schoolId = await getSchoolId(req);
+        if (!schoolId) {
+            return res.status(404).json({ message: "School not found" });
+        }
+        
         const classDetails = await Class.findOne({
             _id: req.params.id,
-            school: req.user.id
+            school: schoolId
         });
         
         if (!classDetails) {
@@ -303,20 +377,50 @@ router.delete("/classes/:id/students/:studentId", verifySchool, async (req, res)
     }
 });
 
-// Get all students in a class
-router.get("/classes/:id/students", verifySchoolOrTeacher, async (req, res) => {
+// Get all students in a class (School, Teacher, or Guard)
+router.get("/classes/:id/students", async (req, res) => {
     try {
-        const classDetails = await Class.findById(req.params.id);
+        // Check authorization based on user role from token
+        let hasAccess = false;
+        let schoolId = null;
         
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(401).json({ message: "Authentication required" });
+        }
+        
+        const token = authHeader.split(" ")[1];
+        let decoded;
+        
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SEC);
+        } catch (error) {
+            return res.status(401).json({ message: "Invalid token" });
+        }
+        
+        const classDetails = await Class.findById(req.params.id);
         if (!classDetails) {
             return res.status(404).json({ message: "Class not found" });
         }
         
-        // Verify permissions
-        if (req.user.rol === 'teacher' && classDetails.teacher.toString() !== req.user.id) {
+        if (decoded.rol === 'teacher') {
+            // Teachers can see students in classes they teach
+            hasAccess = classDetails.teacher && classDetails.teacher.toString() === decoded.id;
+        } else if (decoded.rol === 'school') {
+            // Schools can see students in their classes
+            hasAccess = classDetails.school.toString() === decoded.id;
+            schoolId = decoded.id;
+        } else if (decoded.rol === 'guard') {
+            // Guards can see students in classes from their school
+            const guard = await Guard.findById(decoded.id);
+            if (guard) {
+                schoolId = guard.school;
+                hasAccess = classDetails.school.toString() === schoolId.toString();
+            }
+        }
+        
+        if (!hasAccess) {
             return res.status(403).json({ message: "You don't have permission to view students in this class" });
-        } else if (req.user.rol === 'school' && classDetails.school.toString() !== req.user.id) {
-            return res.status(403).json({ message: "This class does not belong to your school" });
         }
         
         // Get all students in this class
