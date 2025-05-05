@@ -3,6 +3,7 @@ const Activity = require("../models/Activity");
 const { verifyToken, verifySchool, verifyAdmin, verifySchoolOrAdmin } = require("../config/jwt");
 const Student = require("../models/Student");
 const Guard = require("../models/Guard");
+const jwt = require("jsonwebtoken");
 
 // Create a new activity (School only)
 router.post("/activities", verifySchool, async (req, res) => {
@@ -66,18 +67,80 @@ router.get("/school/activities", verifySchool, async (req, res) => {
     }
 });
 
-// Get single activity by ID (Public)
+// Get single activity by ID (Public - basic info, School/Guard - with students)
 router.get("/activities/:id", async (req, res) => {
     try {
-        const activity = await Activity.findById(req.params.id)
-            .populate("school", "name address phone email website image")
-            .populate("participants", "firstName lastName email"); // Only populate if we have a Student model
+        const activityId = req.params.id;
+        const authHeader = req.headers.authorization;
+        let userRole = null;
+        let userId = null;
+        let schoolId = null;
+        
+        // Check if request has authorization
+        if (authHeader) {
+            const token = authHeader.split(" ")[1];
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SEC);
+                userRole = decoded.rol;
+                userId = decoded.id;
+                
+                // If guard, get their school
+                if (userRole === 'guard') {
+                    const guard = await Guard.findById(userId);
+                    if (guard) {
+                        schoolId = guard.school;
+                    } else {
+                        userRole = null; // Guard not found, treat as public
+                    }
+                } else if (userRole === 'school') {
+                    schoolId = userId;
+                }
+            } catch (error) {
+                // Invalid token, continue as public
+            }
+        }
+        
+        // Base activity query
+        const activity = await Activity.findById(activityId)
+            .populate("school", "name address phone email website image");
             
         if (!activity) {
             return res.status(404).json({ message: "Activity not found" });
         }
         
-        res.status(200).json(activity);
+        // For authenticated schools or guards
+        if ((userRole === 'school' || userRole === 'guard') && schoolId) {
+            // For schools - only show their own activities with students
+            // For guards - only show activities from their school with students
+            
+            // Check if school matches (either school's own activity or guard's school activity)
+            if (activity.school._id.toString() === schoolId.toString()) {
+                // Get activity with student details
+                const activityWithStudents = await Activity.findById(activityId)
+                    .populate("school", "name address phone email website image")
+                    .populate({
+                        path: "participants",
+                        select: "firstName lastName email phoneNumber class",
+                        match: { school: schoolId }, // Only show students from this school
+                        populate: {
+                            path: "class",
+                            select: "name"
+                        }
+                    });
+                    
+                return res.status(200).json(activityWithStudents);
+            }
+        }
+            
+        // For public or other roles, or if school/guard doesn't match
+        // Return activity without student details
+        const { participants, ...activityWithoutParticipants } = activity.toObject();
+        const participantCount = participants ? participants.length : 0;
+        
+        res.status(200).json({
+            ...activityWithoutParticipants,
+            participantCount
+        });
     } catch (error) {
         res.status(500).json({ message: "Error retrieving activity", error: error.message });
     }
