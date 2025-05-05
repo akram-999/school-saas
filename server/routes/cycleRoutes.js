@@ -1,7 +1,8 @@
 const router = require("express").Router();
 const Cycle = require("../models/Cycle");
 const Class = require("../models/Class");
-const { verifySchool } = require("../config/jwt");
+const Guard = require("../models/Guard");
+const { verifyToken, verifySchool, verifyGuard, verifyGuardOrSchool } = require("../config/jwt");
 
 // Create a new cycle (School only)
 router.post("/cycles", verifySchool, async (req, res) => {
@@ -31,10 +32,24 @@ router.post("/cycles", verifySchool, async (req, res) => {
     }
 });
 
-// Get all cycles for a school
-router.get("/cycles", verifySchool, async (req, res) => {
+// Get all cycles for a school (School or Guard)
+router.get("/cycles", verifyGuardOrSchool, async (req, res) => {
     try {
-        const cycles = await Cycle.find({ school: req.user.id })
+        let schoolId;
+        
+        // Determine school ID based on user role
+        if (req.user.rol === 'school') {
+            schoolId = req.user.id;
+        } else if (req.user.rol === 'guard') {
+            // Get guard's school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            schoolId = guard.school;
+        }
+        
+        const cycles = await Cycle.find({ school: schoolId })
             .populate("classes", "name grade section");
             
         res.status(200).json(cycles);
@@ -43,12 +58,26 @@ router.get("/cycles", verifySchool, async (req, res) => {
     }
 });
 
-// Get a specific cycle
-router.get("/cycles/:id", verifySchool, async (req, res) => {
+// Get a specific cycle (School or Guard)
+router.get("/cycles/:id", verifyGuardOrSchool, async (req, res) => {
     try {
+        let schoolId;
+        
+        // Determine school ID based on user role
+        if (req.user.rol === 'school') {
+            schoolId = req.user.id;
+        } else if (req.user.rol === 'guard') {
+            // Get guard's school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            schoolId = guard.school;
+        }
+        
         const cycleDetails = await Cycle.findOne({
             _id: req.params.id,
-            school: req.user.id
+            school: schoolId
         })
         .populate("classes", "name grade section capacity teacher students");
             
@@ -62,14 +91,28 @@ router.get("/cycles/:id", verifySchool, async (req, res) => {
     }
 });
 
-// Update a cycle (School only)
-router.put("/cycles/:id", verifySchool, async (req, res) => {
+// Update a cycle (School or Guard)
+router.put("/cycles/:id", verifyGuardOrSchool, async (req, res) => {
     try {
         const { name, description, startDate, endDate, type, academicYear, gradePostingStartDate, gradePostingEndDate, isActive } = req.body;
         
+        let schoolId;
+        
+        // Determine school ID based on user role
+        if (req.user.rol === 'school') {
+            schoolId = req.user.id;
+        } else if (req.user.rol === 'guard') {
+            // Get guard's school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            schoolId = guard.school;
+        }
+        
         const cycleDetails = await Cycle.findOne({
             _id: req.params.id,
-            school: req.user.id
+            school: schoolId
         });
         
         if (!cycleDetails) {
@@ -129,8 +172,8 @@ router.delete("/cycles/:id", verifySchool, async (req, res) => {
     }
 });
 
-// Add a class to a cycle (School only)
-router.post("/cycles/:id/classes", verifySchool, async (req, res) => {
+// Add a class to a cycle (School or Guard)
+router.post("/cycles/:id/classes", verifyGuardOrSchool, async (req, res) => {
     try {
         const { classId } = req.body;
         
@@ -138,9 +181,23 @@ router.post("/cycles/:id/classes", verifySchool, async (req, res) => {
             return res.status(400).json({ message: "Class ID is required" });
         }
         
+        let schoolId;
+        
+        // Determine school ID based on user role
+        if (req.user.rol === 'school') {
+            schoolId = req.user.id;
+        } else if (req.user.rol === 'guard') {
+            // Get guard's school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            schoolId = guard.school;
+        }
+        
         const cycleDetails = await Cycle.findOne({
             _id: req.params.id,
-            school: req.user.id
+            school: schoolId
         });
         
         if (!cycleDetails) {
@@ -149,7 +206,7 @@ router.post("/cycles/:id/classes", verifySchool, async (req, res) => {
         
         const classDetails = await Class.findOne({
             _id: classId,
-            school: req.user.id
+            school: schoolId
         });
         
         if (!classDetails) {
@@ -172,12 +229,26 @@ router.post("/cycles/:id/classes", verifySchool, async (req, res) => {
     }
 });
 
-// Remove a class from a cycle (School only)
-router.delete("/cycles/:id/classes/:classId", verifySchool, async (req, res) => {
+// Remove a class from a cycle (School or Guard)
+router.delete("/cycles/:id/classes/:classId", verifyGuardOrSchool, async (req, res) => {
     try {
+        let schoolId;
+        
+        // Determine school ID based on user role
+        if (req.user.rol === 'school') {
+            schoolId = req.user.id;
+        } else if (req.user.rol === 'guard') {
+            // Get guard's school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            schoolId = guard.school;
+        }
+        
         const cycleDetails = await Cycle.findOne({
             _id: req.params.id,
-            school: req.user.id
+            school: schoolId
         });
         
         if (!cycleDetails) {
