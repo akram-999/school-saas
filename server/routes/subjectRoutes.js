@@ -6,7 +6,7 @@ const { verifySchool, verifySchoolOrTeacher } = require("../config/jwt");
 // Create a new subject (School only)
 router.post("/subjects", verifySchool, async (req, res) => {
     try {
-        const { name, code, description, gradeLevel, credits, teachers } = req.body;
+        const { name, code, description, teachers, cycle } = req.body;
         
         // Check if subject code already exists for this school
         const exists = await Subject.findOne({ 
@@ -23,9 +23,8 @@ router.post("/subjects", verifySchool, async (req, res) => {
             name,
             code,
             description,
-            gradeLevel,
-            credits,
             teachers: teachers || [],
+            cycle,
             school: req.user.id,
         });
 
@@ -50,7 +49,8 @@ router.post("/subjects", verifySchool, async (req, res) => {
 router.get("/subjects", verifySchool, async (req, res) => {
     try {
         const subjects = await Subject.find({ school: req.user.id })
-            .populate("teachers", "firstName lastName email specialization");
+            .populate("teachers", "firstName lastName email specialization")
+            .populate("cycle", "name type startDate endDate");
             
         res.status(200).json(subjects);
     } catch (error) {
@@ -71,7 +71,8 @@ router.get("/subjects/:id", verifySchoolOrTeacher, async (req, res) => {
         }
         
         const subject = await Subject.findOne(query)
-            .populate("teachers", "firstName lastName email specialization");
+            .populate("teachers", "firstName lastName email specialization")
+            .populate("cycle", "name type startDate endDate");
             
         if (!subject) {
             return res.status(404).json({ message: "Subject not found or you don't have permission" });
@@ -86,7 +87,7 @@ router.get("/subjects/:id", verifySchoolOrTeacher, async (req, res) => {
 // Update a subject (School only)
 router.put("/subjects/:id", verifySchool, async (req, res) => {
     try {
-        const { name, description, gradeLevel, credits, teachers, isActive } = req.body;
+        const { name, description, teachers, cycle } = req.body;
         
         const subject = await Subject.findOne({
             _id: req.params.id,
@@ -101,9 +102,7 @@ router.put("/subjects/:id", verifySchool, async (req, res) => {
         const updateObj = {};
         if (name) updateObj.name = name;
         if (description) updateObj.description = description;
-        if (gradeLevel) updateObj.gradeLevel = gradeLevel;
-        if (credits) updateObj.credits = credits;
-        if (isActive !== undefined) updateObj.isActive = isActive;
+        if (cycle) updateObj.cycle = cycle;
         
         // Handle teacher assignment changes if provided
         if (teachers) {
@@ -134,7 +133,9 @@ router.put("/subjects/:id", verifySchool, async (req, res) => {
             req.params.id,
             { $set: updateObj },
             { new: true }
-        ).populate("teachers", "firstName lastName email specialization");
+        )
+        .populate("teachers", "firstName lastName email specialization")
+        .populate("cycle", "name type startDate endDate");
         
         res.status(200).json(updatedSubject);
     } catch (error) {
