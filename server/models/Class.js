@@ -5,14 +5,6 @@ const classSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    grade: {
-        type: String,
-        required: true,
-    },
-    section: {
-        type: String,
-        required: true,
-    },
     capacity: {
         type: Number,
         required: true,
@@ -52,7 +44,8 @@ const classSchema = new mongoose.Schema({
         type: String
     },
     schedule: {
-        type: String
+        type: mongoose.Schema.Types.ObjectId,
+        ref:'Schedule'
     },
     isActive: {
         type: Boolean,
