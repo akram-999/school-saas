@@ -40,6 +40,53 @@ router.post("/guard/login", async (req, res) => {
     }
 });
 
+// Guard Registration (School only can register guards)
+router.post("/guards", verifySchool, async (req, res) => {
+    try {
+        const { 
+            firstName, firstName_ar, lastName, lastName_ar,
+            email, password, phoneNumber, address, cin,
+            address_ar, dateOfBirth 
+        } = req.body;
+        
+        // Check if guard exists
+        const exists = await Guard.findOne({ email });
+        if (exists) {
+            return res.status(400).json({ message: 'Guard already exists' });
+        }
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPass = await bcrypt.hash(password, salt);
+
+        // Create new guard
+        const newGuard = new Guard({
+            firstName,
+            firstName_ar,
+            lastName,
+            lastName_ar,
+            email,
+            password: hashedPass,
+            phoneNumber,
+            address,
+            cin,
+            address_ar,
+            dateOfBirth,
+            school: req.user.id,  // Associate guard with the school that's creating it
+            rol: 'guard'
+        });
+
+        // Save guard
+        const guard = await newGuard.save();
+        
+        // Send response without sensitive data
+        const { password: _, ...guardWithoutPassword } = guard.toObject();
+        res.status(201).json(guardWithoutPassword);
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating guard', error: error.message });
+    }
+});
+
 // Get Guard Profile
 router.get("/guard/profile", verifyGuard, async (req, res) => {
     try {
@@ -59,15 +106,24 @@ router.get("/guard/profile", verifyGuard, async (req, res) => {
 // Update Guard Profile
 router.put("/guard/profile", verifyGuard, async (req, res) => {
     try {
-        const { firstName, lastName, email, password, phoneNumber, address } = req.body;
+        const { 
+            firstName, firstName_ar, lastName, lastName_ar,
+            email, password, phoneNumber, address, cin,
+            address_ar, dateOfBirth 
+        } = req.body;
         
         // Prepare update object
         const updateObj = {};
         if (firstName) updateObj.firstName = firstName;
+        if (firstName_ar) updateObj.firstName_ar = firstName_ar;
         if (lastName) updateObj.lastName = lastName;
+        if (lastName_ar) updateObj.lastName_ar = lastName_ar;
         if (email) updateObj.email = email;
         if (phoneNumber) updateObj.phoneNumber = phoneNumber;
         if (address) updateObj.address = address;
+        if (cin) updateObj.cin = cin;
+        if (address_ar) updateObj.address_ar = address_ar;
+        if (dateOfBirth) updateObj.dateOfBirth = dateOfBirth;
         
         // Handle password update if provided
         if (password) {
