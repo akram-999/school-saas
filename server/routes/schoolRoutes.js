@@ -4,8 +4,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { verifySchool, verifyAdmin, verifySchoolOrAdmin, generateSchoolToken } = require("../config/jwt");
 
-// School Registration (Admin only can register schools)
-router.post("/school/register", verifyAdmin, async (req, res) => {
+// School Registration 
+router.post("/school/register", async (req, res) => {
     try {
         const { name, address, phone, email, password, website, image } = req.body;
         

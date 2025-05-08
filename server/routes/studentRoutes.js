@@ -19,12 +19,18 @@ const {
 // Student Registration (Only School can register)
 router.post("/student/register", verifySchool, async (req, res) => {
     try {
-        const { firstName, lastName, email, password, dateOfBirth, phoneNumber, address } = req.body;
+        const { firstName, firstName_ar, lastName, lastName_ar, pupilCode, palaceOfBirth, palaceOfBirth_ar, cin, nationality, email, password, gender, address_ar, dateOfBirth, phoneNumber, address } = req.body;
         
         // Check if student exists
         const exists = await Student.findOne({ email });
         if (exists) {
             return res.status(400).json({ message: 'Student already exists' });
+        }
+
+        // Check if pupilCode exists
+        const pupilCodeExists = await Student.findOne({ pupilCode });
+        if (pupilCodeExists) {
+            return res.status(400).json({ message: 'Pupil code already exists' });
         }
 
         // Hash password
@@ -34,9 +40,18 @@ router.post("/student/register", verifySchool, async (req, res) => {
         // Create new student
         const newStudent = new Student({
             firstName,
+            firstName_ar,
             lastName,
+            lastName_ar,
+            pupilCode,
+            palaceOfBirth,
+            palaceOfBirth_ar,
+            cin,
+            nationality,
             email,
             password: hashedPass,
+            gender,
+            address_ar,
             dateOfBirth,
             phoneNumber,
             address,
@@ -161,16 +176,25 @@ router.put("/students/:id", verifyToken, async (req, res) => {
 // Helper function to update student profile
 async function updateStudentProfile(studentId, updateData, res) {
     try {
-        const { firstName, lastName, email, password, dateOfBirth, phoneNumber, address, image, class: classId } = updateData;
+        const { firstName, firstName_ar, lastName, lastName_ar, pupilCode, palaceOfBirth, palaceOfBirth_ar, cin, nationality, email, password, gender, address_ar, dateOfBirth, phoneNumber, address, image, class: classId } = updateData;
         
         // Prepare update object
         const updateObj = {};
         if (firstName) updateObj.firstName = firstName;
+        if (firstName_ar) updateObj.firstName_ar = firstName_ar;
         if (lastName) updateObj.lastName = lastName;
+        if (lastName_ar) updateObj.lastName_ar = lastName_ar;
+        if (pupilCode) updateObj.pupilCode = pupilCode;
+        if (palaceOfBirth) updateObj.palaceOfBirth = palaceOfBirth;
+        if (palaceOfBirth_ar) updateObj.palaceOfBirth_ar = palaceOfBirth_ar;
+        if (cin) updateObj.cin = cin;
+        if (nationality) updateObj.nationality = nationality;
         if (email) updateObj.email = email;
         if (dateOfBirth) updateObj.dateOfBirth = dateOfBirth;
         if (phoneNumber) updateObj.phoneNumber = phoneNumber;
         if (address) updateObj.address = address;
+        if (address_ar) updateObj.address_ar = address_ar;
+        if (gender) updateObj.gender = gender;
         if (image) updateObj.image = image;
         if (classId) updateObj.class = classId;
         
