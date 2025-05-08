@@ -11,12 +11,22 @@ const { verifySchool, verifyParent, verifyParentOrSchool, generateParentToken } 
 // Parent Registration (School only can register parents)
 router.post("/parents", verifySchool, async (req, res) => {
     try {
-        const { firstName, lastName, email, password, phoneNumber, address, occupation, relationToStudent, children } = req.body;
+        const { 
+            firstName, firstName_ar, lastName, lastName_ar,
+            cin, email, password, phoneNumber,
+            address, occupation, relationToStudent, children,
+            image 
+        } = req.body;
         
         // Check if parent exists
         const exists = await Parent.findOne({ email });
         if (exists) {
             return res.status(400).json({ message: 'Parent already exists' });
+        }
+
+        // Validate relationToStudent
+        if (!['father', 'mother', 'guardian', 'other'].includes(relationToStudent)) {
+            return res.status(400).json({ message: 'Invalid relation to student' });
         }
 
         // Hash password
@@ -26,7 +36,10 @@ router.post("/parents", verifySchool, async (req, res) => {
         // Create new parent
         const newParent = new Parent({
             firstName,
+            firstName_ar,
             lastName,
+            lastName_ar,
+            cin,
             email,
             password: hashedPass,
             phoneNumber,
@@ -34,7 +47,9 @@ router.post("/parents", verifySchool, async (req, res) => {
             occupation,
             relationToStudent,
             children: children || [],
+            image,
             school: req.user.id,  // Associate parent with the school that's creating it
+            isActive: true
         });
 
         // Save parent
@@ -103,17 +118,32 @@ router.get("/parent/profile", verifyParent, async (req, res) => {
 // Update Parent Profile
 router.put("/parent/profile", verifyParent, async (req, res) => {
     try {
-        const { firstName, lastName, email, password, phoneNumber, address, occupation, image } = req.body;
+        const { 
+            firstName, firstName_ar, lastName, lastName_ar,
+            cin, email, password, phoneNumber,
+            address, occupation, relationToStudent, image,
+            isActive 
+        } = req.body;
         
         // Prepare update object
         const updateObj = {};
         if (firstName) updateObj.firstName = firstName;
+        if (firstName_ar) updateObj.firstName_ar = firstName_ar;
         if (lastName) updateObj.lastName = lastName;
+        if (lastName_ar) updateObj.lastName_ar = lastName_ar;
+        if (cin) updateObj.cin = cin;
         if (email) updateObj.email = email;
         if (phoneNumber) updateObj.phoneNumber = phoneNumber;
         if (address) updateObj.address = address;
         if (occupation) updateObj.occupation = occupation;
+        if (relationToStudent) {
+            if (!['father', 'mother', 'guardian', 'other'].includes(relationToStudent)) {
+                return res.status(400).json({ message: 'Invalid relation to student' });
+            }
+            updateObj.relationToStudent = relationToStudent;
+        }
         if (image) updateObj.image = image;
+        if (isActive !== undefined) updateObj.isActive = isActive;
         
         // Handle password update if provided
         if (password) {

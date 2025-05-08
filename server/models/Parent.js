@@ -31,7 +31,6 @@ const parentSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    phone: String,
     phoneNumber: {
         type: String,
         required: true,
