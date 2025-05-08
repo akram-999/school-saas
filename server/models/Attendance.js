@@ -36,11 +36,6 @@ const attendanceSchema = new mongoose.Schema({
             type: String
         }
     }],
-    // Total number of students in class
-    totalStudents: {
-        type: Number,
-        required: true
-    },
     // Statistics summary
     summary: {
         present: {

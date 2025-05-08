@@ -2,10 +2,25 @@ const router = require("express").Router();
 const Attendance = require("../models/Attendance");
 const Student = require("../models/Student");
 const Subject = require("../models/Subject");
-const { verifyTeacher, verifySchool, verifySchoolOrTeacher, verifyParent } = require("../config/jwt");
+const Guard = require("../models/Guard");
+const { verifyTeacher, verifySchool, verifySchoolOrTeacher, verifyParent, verifyGuardOrSchool } = require("../config/jwt");
 
-// Create attendance record (Teacher only)
-router.post("/attendance", verifyTeacher, async (req, res) => {
+// Helper function to get school ID based on user role
+const getSchoolId = async (req) => {
+    if (req.user.rol === 'school') {
+        return req.user.id;
+    } else if (req.user.rol === 'guard') {
+        const guard = await Guard.findById(req.user.id);
+        if (!guard) {
+            throw new Error("Guard not found");
+        }
+        return guard.school;
+    }
+    return null;
+};
+
+// Create attendance record (Teacher, School, or Guard)
+router.post("/attendance", async (req, res) => {
     try {
         const { date, subject, records } = req.body;
         
@@ -13,14 +28,100 @@ router.post("/attendance", verifyTeacher, async (req, res) => {
             return res.status(400).json({ message: "Date, subject, and records are required" });
         }
         
-        // Verify teacher is assigned to this subject
-        const subjectDoc = await Subject.findOne({
-            _id: subject,
-            teachers: req.user.id
-        });
+        let schoolId, teacherId;
         
-        if (!subjectDoc) {
-            return res.status(403).json({ message: "You are not authorized to create attendance for this subject" });
+        // Handle different roles
+        if (req.user.rol === 'teacher') {
+            // Verify teacher is assigned to this subject
+            const subjectDoc = await Subject.findOne({
+                _id: subject,
+                teachers: req.user.id
+            });
+            
+            if (!subjectDoc) {
+                return res.status(403).json({ message: "You are not authorized to create attendance for this subject" });
+            }
+            
+            teacherId = req.user.id;
+            schoolId = subjectDoc.school;
+        } else if (req.user.rol === 'school') {
+            // Verify subject belongs to this school
+            const subjectDoc = await Subject.findOne({
+                _id: subject,
+                school: req.user.id
+            });
+            
+            if (!subjectDoc) {
+                return res.status(403).json({ message: "This subject does not belong to your school" });
+            }
+            
+            schoolId = req.user.id;
+            teacherId = req.body.teacher; // School can specify a teacher
+            
+            // Verify teacher exists and belongs to this school
+            if (teacherId) {
+                const teacherExists = await Teacher.findOne({
+                    _id: teacherId,
+                    school: schoolId
+                });
+                
+                if (!teacherExists) {
+                    return res.status(404).json({ message: "Teacher not found" });
+                }
+            } else {
+                return res.status(400).json({ message: "Teacher ID is required" });
+            }
+        } else if (req.user.rol === 'guard') {
+            // Get the guard's school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            
+            // Verify subject belongs to the guard's school
+            const subjectDoc = await Subject.findOne({
+                _id: subject,
+                school: guard.school
+            });
+            
+            if (!subjectDoc) {
+                return res.status(403).json({ message: "This subject does not belong to your school" });
+            }
+            
+            schoolId = guard.school;
+            teacherId = req.body.teacher; // Guard can specify a teacher
+            
+            // Verify teacher exists and belongs to this school
+            if (teacherId) {
+                const teacherExists = await Teacher.findOne({
+                    _id: teacherId,
+                    school: schoolId
+                });
+                
+                if (!teacherExists) {
+                    return res.status(404).json({ message: "Teacher not found" });
+                }
+            } else {
+                return res.status(400).json({ message: "Teacher ID is required" });
+            }
+        } else {
+            return res.status(403).json({ message: "Unauthorized" });
+        }
+        
+        // Verify each student belongs to the school
+        for (const record of records) {
+            if (!record.student || !record.status) {
+                return res.status(400).json({ message: "Each record must have student ID and status" });
+            }
+            
+            const studentExists = await Student.findOne({
+                _id: record.student,
+                school: schoolId
+            });
+            
+            if (!studentExists) {
+                return res.status(404).json({ message: `Student with ID ${record.student} not found or does not belong to this school` });
+            }
         }
         
         // Process records and calculate summary
@@ -32,10 +133,6 @@ router.post("/attendance", verifyTeacher, async (req, res) => {
         };
         
         records.forEach(record => {
-            if (!record.student || !record.status) {
-                throw new Error("Each record must have student ID and status");
-            }
-            
             summary[record.status]++;
         });
         
@@ -43,10 +140,9 @@ router.post("/attendance", verifyTeacher, async (req, res) => {
         const newAttendance = new Attendance({
             date,
             subject,
-            school: subjectDoc.school,
-            teacher: req.user.id,
+            school: schoolId,
+            teacher: teacherId,
             records,
-            totalStudents: records.length,
             summary
         });
         
@@ -58,13 +154,14 @@ router.post("/attendance", verifyTeacher, async (req, res) => {
     }
 });
 
-// Get attendance by subject (Teacher or School)
-router.get("/attendance/subject/:subjectId", verifySchoolOrTeacher, async (req, res) => {
+// Get attendance by subject (Teacher, School, or Guard)
+router.get("/attendance/subject/:subjectId", async (req, res) => {
     try {
         const query = { subject: req.params.subjectId };
         
-        // If teacher is making the request, verify they teach this subject
+        // Handle different roles
         if (req.user.rol === 'teacher') {
+            // Verify teacher is assigned to this subject
             const subjectDoc = await Subject.findOne({
                 _id: req.params.subjectId,
                 teachers: req.user.id
@@ -75,9 +172,8 @@ router.get("/attendance/subject/:subjectId", verifySchoolOrTeacher, async (req, 
             }
             
             query.teacher = req.user.id;
-        } 
-        // If school is making the request, verify this subject belongs to the school
-        else if (req.user.rol === 'school') {
+        } else if (req.user.rol === 'school') {
+            // Verify subject belongs to this school
             const subjectDoc = await Subject.findOne({
                 _id: req.params.subjectId,
                 school: req.user.id
@@ -88,6 +184,26 @@ router.get("/attendance/subject/:subjectId", verifySchoolOrTeacher, async (req, 
             }
             
             query.school = req.user.id;
+        } else if (req.user.rol === 'guard') {
+            // Get the guard's school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            
+            // Verify subject belongs to the guard's school
+            const subjectDoc = await Subject.findOne({
+                _id: req.params.subjectId,
+                school: guard.school
+            });
+            
+            if (!subjectDoc) {
+                return res.status(403).json({ message: "This subject does not belong to your school" });
+            }
+            
+            query.school = guard.school;
+        } else {
+            return res.status(403).json({ message: "Unauthorized" });
         }
         
         // Add date filtering if provided
@@ -105,6 +221,7 @@ router.get("/attendance/subject/:subjectId", verifySchoolOrTeacher, async (req, 
         const attendance = await Attendance.find(query)
             .populate("subject", "name code")
             .populate("teacher", "firstName lastName")
+            .populate("records.student", "firstName lastName pupilCode")
             .sort({ date: -1 });
             
         res.status(200).json(attendance);
@@ -113,8 +230,8 @@ router.get("/attendance/subject/:subjectId", verifySchoolOrTeacher, async (req, 
     }
 });
 
-// Get attendance by date (Teacher or School)
-router.get("/attendance/date/:date", verifySchoolOrTeacher, async (req, res) => {
+// Get attendance by date (Teacher, School, or Guard)
+router.get("/attendance/date/:date", async (req, res) => {
     try {
         const date = new Date(req.params.date);
         
@@ -141,12 +258,23 @@ router.get("/attendance/date/:date", verifySchoolOrTeacher, async (req, res) => 
             query.teacher = req.user.id;
         } else if (req.user.rol === 'school') {
             query.school = req.user.id;
+        } else if (req.user.rol === 'guard') {
+            // Get the guard's school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            
+            query.school = guard.school;
+        } else {
+            return res.status(403).json({ message: "Unauthorized" });
         }
         
         const attendance = await Attendance.find(query)
             .populate("subject", "name code")
             .populate("teacher", "firstName lastName")
-            .sort({ date: -1 });
+            .populate("records.student", "firstName lastName pupilCode")
+            .sort({ subject: 1 });
             
         res.status(200).json(attendance);
     } catch (error) {
@@ -154,7 +282,7 @@ router.get("/attendance/date/:date", verifySchoolOrTeacher, async (req, res) => 
     }
 });
 
-// Get attendance for a specific student (Teacher, School, or Parent)
+// Get attendance for a specific student (Teacher, School, Guard, or Parent)
 router.get("/attendance/student/:studentId", async (req, res) => {
     try {
         const studentId = req.params.studentId;
@@ -183,6 +311,18 @@ router.get("/attendance/student/:studentId", async (req, res) => {
             const subjectIds = teacherSubjects.map(subject => subject._id.toString());
             
             // We'll filter attendance records by these subjects later
+        } else if (req.user.rol === 'guard') {
+            // Guards can only view students in their school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            
+            if (student.school.toString() !== guard.school.toString()) {
+                return res.status(403).json({ message: "This student does not belong to your school" });
+            }
+        } else {
+            return res.status(403).json({ message: "Unauthorized" });
         }
         
         // Find attendance records for this student
@@ -229,8 +369,8 @@ router.get("/attendance/student/:studentId", async (req, res) => {
     }
 });
 
-// Update attendance record (Teacher only)
-router.put("/attendance/:id", verifyTeacher, async (req, res) => {
+// Update attendance record (Teacher, School, or Guard)
+router.put("/attendance/:id", async (req, res) => {
     try {
         const { records } = req.body;
         
@@ -238,14 +378,46 @@ router.put("/attendance/:id", verifyTeacher, async (req, res) => {
             return res.status(400).json({ message: "Records array is required" });
         }
         
-        // Find attendance record and verify teacher owns it
-        const attendance = await Attendance.findOne({
-            _id: req.params.id,
-            teacher: req.user.id
-        });
+        let query = { _id: req.params.id };
+        
+        // Apply role-based filters
+        if (req.user.rol === 'teacher') {
+            query.teacher = req.user.id;
+        } else if (req.user.rol === 'school') {
+            query.school = req.user.id;
+        } else if (req.user.rol === 'guard') {
+            // Get the guard's school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            
+            query.school = guard.school;
+        } else {
+            return res.status(403).json({ message: "Unauthorized" });
+        }
+        
+        // Find attendance record
+        const attendance = await Attendance.findOne(query);
         
         if (!attendance) {
             return res.status(404).json({ message: "Attendance record not found or you don't have permission" });
+        }
+        
+        // Verify each student belongs to the school
+        for (const record of records) {
+            if (!record.student || !record.status) {
+                return res.status(400).json({ message: "Each record must have student ID and status" });
+            }
+            
+            const studentExists = await Student.findOne({
+                _id: record.student,
+                school: attendance.school
+            });
+            
+            if (!studentExists) {
+                return res.status(404).json({ message: `Student with ID ${record.student} not found or does not belong to this school` });
+            }
         }
         
         // Update records and recalculate summary
@@ -263,7 +435,6 @@ router.put("/attendance/:id", verifyTeacher, async (req, res) => {
         });
         
         attendance.summary = summary;
-        attendance.totalStudents = records.length;
         
         await attendance.save();
         
@@ -273,16 +444,26 @@ router.put("/attendance/:id", verifyTeacher, async (req, res) => {
     }
 });
 
-// Delete attendance record (Teacher or School)
-router.delete("/attendance/:id", verifySchoolOrTeacher, async (req, res) => {
+// Delete attendance record (Teacher, School, or Guard)
+router.delete("/attendance/:id", async (req, res) => {
     try {
-        const query = { _id: req.params.id };
+        let query = { _id: req.params.id };
         
         // Apply role-based filters
         if (req.user.rol === 'teacher') {
             query.teacher = req.user.id;
         } else if (req.user.rol === 'school') {
             query.school = req.user.id;
+        } else if (req.user.rol === 'guard') {
+            // Get the guard's school
+            const guard = await Guard.findById(req.user.id);
+            if (!guard) {
+                return res.status(404).json({ message: "Guard not found" });
+            }
+            
+            query.school = guard.school;
+        } else {
+            return res.status(403).json({ message: "Unauthorized" });
         }
         
         const attendance = await Attendance.findOne(query);
