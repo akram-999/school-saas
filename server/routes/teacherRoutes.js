@@ -9,7 +9,12 @@ const { verifySchool, verifyTeacher, verifySchoolOrTeacher, generateTeacherToken
 // Teacher Registration (School only can register teachers)
 router.post("/teachers", verifySchool, async (req, res) => {
     try {
-        const { firstName, lastName, email, password, phoneNumber, address, specialization, biography } = req.body;
+        const { 
+            firstName, firstName_ar, lastName, lastName_ar, 
+            email, password, phoneNumber, address, address_ar,
+            dateOfBirth, palaceOfBirth, palaceOfBirth_ar, cin,
+            nationality, specialization, image 
+        } = req.body;
         
         // Check if teacher exists
         const exists = await Teacher.findOne({ email });
@@ -24,14 +29,23 @@ router.post("/teachers", verifySchool, async (req, res) => {
         // Create new teacher
         const newTeacher = new Teacher({
             firstName,
+            firstName_ar,
             lastName,
+            lastName_ar,
             email,
             password: hashedPass,
             phoneNumber,
             address,
+            address_ar,
+            dateOfBirth,
+            palaceOfBirth,
+            palaceOfBirth_ar,
+            cin,
+            nationality,
             specialization,
-            biography,
+            image,
             school: req.user.id,  // Associate teacher with the school that's creating it
+            status: 'Active'  // Default status
         });
 
         // Save teacher
@@ -92,18 +106,31 @@ router.get("/teacher/profile", verifyTeacher, async (req, res) => {
 // Update Teacher Profile
 router.put("/teacher/profile", verifyTeacher, async (req, res) => {
     try {
-        const { firstName, lastName, email, password, phoneNumber, address, specialization, biography, image } = req.body;
+        const { 
+            firstName, firstName_ar, lastName, lastName_ar, 
+            email, password, phoneNumber, address, address_ar,
+            dateOfBirth, palaceOfBirth, palaceOfBirth_ar, cin,
+            nationality, specialization, image, status 
+        } = req.body;
         
         // Prepare update object
         const updateObj = {};
         if (firstName) updateObj.firstName = firstName;
+        if (firstName_ar) updateObj.firstName_ar = firstName_ar;
         if (lastName) updateObj.lastName = lastName;
+        if (lastName_ar) updateObj.lastName_ar = lastName_ar;
         if (email) updateObj.email = email;
         if (phoneNumber) updateObj.phoneNumber = phoneNumber;
         if (address) updateObj.address = address;
+        if (address_ar) updateObj.address_ar = address_ar;
+        if (dateOfBirth) updateObj.dateOfBirth = dateOfBirth;
+        if (palaceOfBirth) updateObj.palaceOfBirth = palaceOfBirth;
+        if (palaceOfBirth_ar) updateObj.palaceOfBirth_ar = palaceOfBirth_ar;
+        if (cin) updateObj.cin = cin;
+        if (nationality) updateObj.nationality = nationality;
         if (specialization) updateObj.specialization = specialization;
-        if (biography) updateObj.biography = biography;
         if (image) updateObj.image = image;
+        if (status) updateObj.status = status;
         
         // Handle password update if provided
         if (password) {
