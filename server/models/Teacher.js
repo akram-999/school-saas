@@ -64,6 +64,10 @@ const teacherSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    schedule: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Schedule'
+    },
     // Reference to the school this teacher belongs to
     school: {
         type: mongoose.Schema.Types.ObjectId,

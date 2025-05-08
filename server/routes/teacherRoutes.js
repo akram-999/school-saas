@@ -2,6 +2,7 @@ const router = require("express").Router();
 const Teacher = require("../models/Teacher");
 const Exam = require("../models/Exam");
 const Subject = require("../models/Subject");
+const Schedule = require("../models/Schedule");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { verifySchool, verifyTeacher, verifySchoolOrTeacher, generateTeacherToken } = require("../config/jwt");
@@ -316,6 +317,84 @@ router.post("/exams/:id/results", verifyTeacher, async (req, res) => {
         res.status(200).json({ message: "Exam results updated successfully", exam });
     } catch (error) {
         res.status(500).json({ message: "Error adding exam results", error: error.message });
+    }
+});
+
+// Get teacher's schedule
+router.get("/teacher/schedule", verifyTeacher, async (req, res) => {
+    try {
+        // Find all schedules where the teacher is assigned to any period
+        const schedules = await Schedule.find({
+            'periods.teacherId': req.user.id
+        })
+        .populate("classId", "name grade section")
+        .populate("periods.subjectId", "name code")
+        .sort({ day: 1, 'periods.startTime': 1 });
+
+        if (!schedules || schedules.length === 0) {
+            return res.status(404).json({ message: "No schedule found for this teacher" });
+        }
+
+        // Format the schedule for better readability
+        const formattedSchedule = schedules.map(schedule => ({
+            day: schedule.day,
+            class: schedule.classId,
+            periods: schedule.periods
+                .filter(period => period.teacherId && period.teacherId.toString() === req.user.id)
+                .map(period => ({
+                    startTime: period.startTime,
+                    endTime: period.endTime,
+                    subject: period.subjectId,
+                    room: period.room
+                }))
+        }));
+
+        res.status(200).json(formattedSchedule);
+    } catch (error) {
+        res.status(500).json({ message: "Error retrieving teacher schedule", error: error.message });
+    }
+});
+
+// Get teacher's schedule for a specific day
+router.get("/teacher/schedule/:day", verifyTeacher, async (req, res) => {
+    try {
+        const { day } = req.params;
+        
+        // Validate day
+        const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        if (!validDays.includes(day)) {
+            return res.status(400).json({ message: "Invalid day" });
+        }
+
+        // Find schedules for the specific day where the teacher is assigned
+        const schedules = await Schedule.find({
+            day,
+            'periods.teacherId': req.user.id
+        })
+        .populate("classId", "name grade section")
+        .populate("periods.subjectId", "name code")
+        .sort({ 'periods.startTime': 1 });
+
+        if (!schedules || schedules.length === 0) {
+            return res.status(404).json({ message: `No schedule found for ${day}` });
+        }
+
+        // Format the schedule for better readability
+        const formattedSchedule = schedules.map(schedule => ({
+            class: schedule.classId,
+            periods: schedule.periods
+                .filter(period => period.teacherId && period.teacherId.toString() === req.user.id)
+                .map(period => ({
+                    startTime: period.startTime,
+                    endTime: period.endTime,
+                    subject: period.subjectId,
+                    room: period.room
+                }))
+        }));
+
+        res.status(200).json(formattedSchedule);
+    } catch (error) {
+        res.status(500).json({ message: "Error retrieving teacher schedule", error: error.message });
     }
 });
 
