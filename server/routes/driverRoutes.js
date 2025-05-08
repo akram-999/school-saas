@@ -7,27 +7,27 @@ const { verifySchool } = require("../config/jwt");
 router.post("/drivers", verifySchool, async (req, res) => {
     try {
         const { 
-            firstName, 
-            lastName,
-            firstName_ar,
-            lastName_ar, 
-            email, 
-            phoneNumber, 
-            address, 
-            licenseNumber, 
-            licenseExpiry, 
-            dateOfBirth, 
-            cin,
-            address_ar ,
-            emergencyContact,
-            image,
-            notes
+            firstName, firstName_ar, lastName, lastName_ar,
+            email, phoneNumber, address, cin, address_ar,
+            licenseNumber, licenseExpiry, dateOfBirth,
+            emergencyContact, image, status
         } = req.body;
         
         // Check if driver with same email already exists
         const existingDriver = await Driver.findOne({ email });
         if (existingDriver) {
             return res.status(400).json({ message: "Driver with this email already exists" });
+        }
+
+        // Check if driver with same license number already exists
+        const existingLicense = await Driver.findOne({ licenseNumber });
+        if (existingLicense) {
+            return res.status(400).json({ message: "Driver with this license number already exists" });
+        }
+        
+        // Validate emergency contact
+        if (!emergencyContact || !emergencyContact.name || !emergencyContact.relationship || !emergencyContact.phoneNumber) {
+            return res.status(400).json({ message: "Emergency contact information is required" });
         }
         
         // Create new driver
@@ -40,14 +40,14 @@ router.post("/drivers", verifySchool, async (req, res) => {
             phoneNumber,
             cin,
             address,
+            address_ar,
             school: req.user.id,
             licenseNumber,
             licenseExpiry,
             dateOfBirth,
-            address_ar,
             emergencyContact,
             image,
-            notes,
+            status: status || 'active',
             vehicles: []
         });
 
@@ -95,22 +95,10 @@ router.get("/drivers/:id", verifySchool, async (req, res) => {
 router.put("/drivers/:id", verifySchool, async (req, res) => {
     try {
         const { 
-            firstName,
-            firstName_ar,
-            lastName,
-            lastName_ar,
-            email, 
-            cin,
-            phoneNumber, 
-            address,
-            licenseNumber,
-            licenseExpiry,
-            dateOfBirth,
-            address_ar,
-            emergencyContact,
-            image,
-            status,
-            notes
+            firstName, firstName_ar, lastName, lastName_ar,
+            email, cin, phoneNumber, address, address_ar,
+            licenseNumber, licenseExpiry, dateOfBirth,
+            emergencyContact, image, status
         } = req.body;
         
         const driverDetails = await Driver.findOne({
@@ -129,6 +117,21 @@ router.put("/drivers/:id", verifySchool, async (req, res) => {
                 return res.status(400).json({ message: "Another driver with this email already exists" });
             }
         }
+
+        // If license number is being changed, check it's not already used
+        if (licenseNumber && licenseNumber !== driverDetails.licenseNumber) {
+            const existingLicense = await Driver.findOne({ licenseNumber });
+            if (existingLicense) {
+                return res.status(400).json({ message: "Another driver with this license number already exists" });
+            }
+        }
+        
+        // Validate emergency contact if being updated
+        if (emergencyContact) {
+            if (!emergencyContact.name || !emergencyContact.relationship || !emergencyContact.phoneNumber) {
+                return res.status(400).json({ message: "Complete emergency contact information is required" });
+            }
+        }
         
         // Prepare update object
         const updateObj = {};
@@ -139,15 +142,19 @@ router.put("/drivers/:id", verifySchool, async (req, res) => {
         if (email) updateObj.email = email;
         if (phoneNumber) updateObj.phoneNumber = phoneNumber;
         if (address) updateObj.address = address;
+        if (cin) updateObj.cin = cin;
+        if (address_ar) updateObj.address_ar = address_ar;
         if (licenseNumber) updateObj.licenseNumber = licenseNumber;
         if (licenseExpiry) updateObj.licenseExpiry = licenseExpiry;
         if (dateOfBirth) updateObj.dateOfBirth = dateOfBirth;
-        if (cin) updateObj.cin = cin;
-        if (address_ar) updateObj.address_ar = address_ar;
         if (emergencyContact) updateObj.emergencyContact = emergencyContact;
         if (image) updateObj.image = image;
-        if (status) updateObj.status = status;
-        if (notes !== undefined) updateObj.notes = notes;
+        if (status) {
+            if (!['active', 'on leave', 'terminated'].includes(status)) {
+                return res.status(400).json({ message: "Invalid status" });
+            }
+            updateObj.status = status;
+        }
         
         // Update driver
         const updatedDriver = await Driver.findByIdAndUpdate(

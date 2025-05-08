@@ -87,9 +87,6 @@ const driverSchema = new mongoose.Schema({
     enum: ['active', 'on leave', 'terminated'],
     default: 'active'
   },
-  notes: {
-    type: String
-  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Driver', driverSchema);
